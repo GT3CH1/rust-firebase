@@ -12,6 +12,6 @@ exclude = ["examples/*", "tests/*"]
 keywords = ["firebase", "rest", "api"]
 
 [dependencies]
-hyper = "0.9.5"
-url = "1.1.0"
-rustc-serialize = "0.3.15"
+isahc = "1.4.0"
+url = "2.2.2"
+rustc-serialize = "0.3.24"

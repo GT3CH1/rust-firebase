@@ -1,25 +1,24 @@
 /*!
- # Firebase REST API for Rust
- Please have a look at the ```Firebase``` struct to get started.
+# Firebase REST API for Rust
+Please have a look at the ```Firebase``` struct to get started.
  */
 
-extern crate hyper;
 extern crate url;
 extern crate rustc_serialize;
+extern crate isahc;
 
 use std::str;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::thread;
 use std::thread::JoinHandle;
-use hyper::Client;
-use hyper::status::StatusCode;
 use url::Url;
 use std::io::{self, Read};
 
 use rustc_serialize::Decodable;
 use rustc_serialize::json;
 pub use rustc_serialize::json::{Json, BuilderError, DecoderError};
+use isahc::http::StatusCode;
 
 /// A Firebase instance to manage data.
 #[derive(Clone)]
@@ -43,7 +42,7 @@ impl Firebase {
     /// - If a url cannot be parsed into a valid url then a ```Err(ParseError::Parser(url::ParseError)```
     ///   will be returned.
     pub fn new(url: &str) -> Result<Self, ParseError> {
-        let url = try!(Url::parse(&url));
+        let url = Url::parse(&url)?;
 
         Firebase::from_url(url)
     }
@@ -55,7 +54,7 @@ impl Firebase {
     /// - If a url cannot be parsed into a valid url then a ```Err(ParseError::Parser(url::ParseError)```
     ///   will be returned.
     pub fn from_url(mut url: Url) -> Result<Self, ParseError> {
-        try!( unwrap_path(&url) );
+        unwrap_path(&url)?;
 
         if url.scheme() != "https" {
             return Err(ParseError::UrlIsNotHTTPS);
@@ -88,7 +87,7 @@ impl Firebase {
     /// - If a url cannot be parsed into a valid url then a ```Err(ParseError::Parser(url::ParseError)```
     ///   will be returned.
     pub fn authed(url: &str, auth_token: &str) -> Result<Self, ParseError> {
-        let mut url = try!(Url::parse(&url));
+        let mut url = Url::parse(&url)?;
         url.query_pairs_mut().append_pair(AUTH, auth_token).finish();
 
         Firebase::from_url(url)
@@ -211,7 +210,7 @@ impl Firebase {
     /// let info = desc.update("The Penultimate Episode!");
     /// ```
     pub fn update(&self, data: &str) -> Result<Response, ReqErr> {
-        self.request(Method::PATCH, Some(data))
+        self.request(Method::PUT, Some(data))
     }
 
     /// Removes Firebase data.
@@ -240,35 +239,35 @@ impl Firebase {
     ///     }
     /// });
     pub fn get_async<F>(&self, callback: F) -> JoinHandle<()>
-    where F: Fn(Result<Response, ReqErr>) + Send + 'static {
+        where F: Fn(Result<Response, ReqErr>) + Send + 'static {
         Firebase::request_url_async(self.url.clone(), Method::GET, None, callback)
     }
 
     /// Asynchronous version of the set method, takes a callback
     /// and returns a handle to the thread making the request to Firebase.
     pub fn set_async<S, F>(&self, data: S, callback: F) -> JoinHandle<()>
-    where F: Fn(Result<Response, ReqErr>) + Send + 'static, S: Into<String> {
+        where F: Fn(Result<Response, ReqErr>) + Send + 'static, S: Into<String> {
         Firebase::request_url_async(self.url.clone(), Method::PUT, Some(data.into()), callback)
     }
 
     /// Asynchronous version of the push method, takes a callback
     /// and returns a handle to the thread making the request to Firebase.
     pub fn push_async<S, F>(&self, data: S, callback: F) -> JoinHandle<()>
-    where F: Fn(Result<Response, ReqErr>) + Send + 'static, S: Into<String> {
+        where F: Fn(Result<Response, ReqErr>) + Send + 'static, S: Into<String> {
         Firebase::request_url_async(self.url.clone(), Method::POST, Some(data.into()), callback)
     }
 
     /// Asynchronous version of the update method, takes a callback
     /// and returns a handle to the thread making the request to Firebase.
     pub fn update_async<S, F>(&self, data: S, callback: F) -> JoinHandle<()>
-    where F: Fn(Result<Response, ReqErr>) + Send + 'static, S: Into<String> {
-        Firebase::request_url_async(self.url.clone(), Method::PATCH, Some(data.into()), callback)
+        where F: Fn(Result<Response, ReqErr>) + Send + 'static, S: Into<String> {
+        Firebase::request_url_async(self.url.clone(), Method::PUT, Some(data.into()), callback)
     }
 
     /// Asynchronous version of the remove method, takes a callback
     /// and returns a handle to the thread making the request to Firebase.
     pub fn remove_async<F>(&self, callback: F) -> JoinHandle<()>
-    where F: Fn(Result<Response, ReqErr>) + Send + 'static {
+        where F: Fn(Result<Response, ReqErr>) + Send + 'static {
         Firebase::request_url_async(self.url.clone(), Method::DELETE, None, callback)
     }
 
@@ -333,29 +332,30 @@ impl Firebase {
     }
 
     fn request_url(url: Url, method: Method, data: Option<&str>) -> Result<Response, ReqErr> {
-        let client = Client::new();
-
+        let client = isahc::HttpClient::new().unwrap();
+        let _url = url.as_str();
         let req = match method {
-            Method::GET     => client.get(url),
-            Method::POST    => client.post(url).body(data.expect("data")),
-            Method::PUT     => client.put(url).body(data.expect("data")),
-            Method::PATCH   => client.patch(url).body(data.expect("data")),
-            Method::DELETE  => client.delete(url),
+            Method::GET => client.get(_url),
+            Method::POST => client.post(_url, data.expect("data")),
+            Method::PUT => client.put(_url, data.expect("data")),
+            // Method::PATCH => client.pa(_url).body(data.expect("data")),
+            Method::DELETE => client.delete(_url),
         };
 
-        let mut res = try!(req.send());
+        let mut res = req?;
 
         let mut body = String::new();
-        try!(res.read_to_string(&mut body));
+        let res_body = res.body_mut();
+        res_body.read_to_string(&mut body);
 
         Ok(Response {
             body: body,
-            code: res.status,
+            code: res.status(),
         })
     }
 
     fn request_url_async<F>(url: Url, method: Method, data: Option<String>, callback: F) -> JoinHandle<()>
-    where F: Fn(Result<Response, ReqErr>) + Send + 'static {
+        where F: Fn(Result<Response, ReqErr>) + Send + 'static {
         thread::spawn(move || {
             callback(Firebase::request_url(url, method, data.as_ref().map(|s| s as &str)));
         })
@@ -413,7 +413,7 @@ impl FirebaseParams {
     /// Asynchronous version of the get method, takes a callback
     /// and returns a handle to the thread making the request to Firebase.
     pub fn get_async<F>(&self, callback: F) -> JoinHandle<()>
-    where F: Fn(Result<Response, ReqErr>) + Send + 'static {
+        where F: Fn(Result<Response, ReqErr>) + Send + 'static {
         Firebase::request_url_async(self.url.clone(), Method::GET, None, callback)
     }
 
@@ -494,7 +494,7 @@ impl FirebaseParams {
 
     fn get_auth(url: &Url) -> HashMap<&'static str, String> {
         url.query_pairs()
-            .filter(|&(ref k,_)| k == AUTH)
+            .filter(|&(ref k, _)| k == AUTH)
             .map(|(_, v)| (AUTH, v.into_owned()))
             .collect()
     }
@@ -548,44 +548,43 @@ enum Method {
     GET,
     POST,
     PUT,
-    PATCH,
     DELETE,
 }
 
-const ORDER_BY:       &'static str = "orderBy";
+const ORDER_BY: &'static str = "orderBy";
 const LIMIT_TO_FIRST: &'static str = "limitToFirst";
-const LIMIT_TO_LAST:  &'static str = "limitToLast";
-const START_AT:       &'static str = "startAt";
-const END_AT:         &'static str = "endAt";
-const EQUAL_TO:       &'static str = "equalTo";
-const SHALLOW:        &'static str = "shallow";
-const FORMAT:         &'static str = "format";
-const EXPORT:         &'static str = "export";
-const AUTH:           &'static str = "auth";
+const LIMIT_TO_LAST: &'static str = "limitToLast";
+const START_AT: &'static str = "startAt";
+const END_AT: &'static str = "endAt";
+const EQUAL_TO: &'static str = "equalTo";
+const SHALLOW: &'static str = "shallow";
+const FORMAT: &'static str = "format";
+const EXPORT: &'static str = "export";
+const AUTH: &'static str = "auth";
 
 #[derive(Debug)]
 pub struct FbOps<'l> {
-    pub order_by:       Option<&'l str>,
+    pub order_by: Option<&'l str>,
     pub limit_to_first: Option<u32>,
-    pub limit_to_last:  Option<u32>,
-    pub start_at:       Option<u32>,
-    pub end_at:         Option<u32>,
-    pub equal_to:       Option<u32>,
-    pub shallow:        Option<bool>,
-    pub format:         Option<bool>,
+    pub limit_to_last: Option<u32>,
+    pub start_at: Option<u32>,
+    pub end_at: Option<u32>,
+    pub equal_to: Option<u32>,
+    pub shallow: Option<bool>,
+    pub format: Option<bool>,
 }
 
 impl<'l> Default for FbOps<'l> {
     fn default() -> Self {
         FbOps {
-            order_by:       None,
+            order_by: None,
             limit_to_first: None,
-            limit_to_last:  None,
-            start_at:       None,
-            end_at:         None,
-            equal_to:       None,
-            shallow:        None,
-            format:         None,
+            limit_to_last: None,
+            start_at: None,
+            end_at: None,
+            equal_to: None,
+            shallow: None,
+            format: None,
         }
     }
 }
@@ -594,12 +593,12 @@ impl<'l> Default for FbOps<'l> {
 pub enum ReqErr {
     ReqNotJSON,
     RespNotUTF8(str::Utf8Error),
-    Network(hyper::Error),
+    Network(isahc::Error),
     Io(io::Error),
 }
 
-impl From<hyper::Error> for ReqErr {
-    fn from(e: hyper::Error) -> Self {
+impl From<isahc::Error> for ReqErr {
+    fn from(e: isahc::Error) -> Self {
         ReqErr::Network(e)
     }
 }
@@ -633,7 +632,7 @@ pub struct Response {
 impl Response {
     /// Returns true if the status code is 200
     pub fn is_success(&self) -> bool {
-        self.code == StatusCode::Ok
+        self.code == StatusCode::OK
     }
 
     /// Turns the response body into a Json enum.
@@ -646,7 +645,6 @@ impl Response {
     ///
     /// ```
     /// extern crate firebase;
-    /// extern crate hyper;
     /// use hyper::status::StatusCode;
     /// use firebase::Response;
     ///
@@ -667,7 +665,7 @@ impl Response {
 
 fn unwrap_path(url: &Url) -> Result<str::Split<char>, ParseError> {
     match url.path_segments() {
-        None    => return Err(ParseError::UrlHasNoPath),
+        None => return Err(ParseError::UrlHasNoPath),
         Some(p) => return Ok(p),
     }
 }

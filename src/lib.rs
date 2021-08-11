@@ -346,7 +346,7 @@ impl Firebase {
 
         let mut body = String::new();
         let res_body = res.body_mut();
-        res_body.read_to_string(&mut body);
+        res_body.read_to_string(&mut body)?;
 
         Ok(Response {
             body: body,

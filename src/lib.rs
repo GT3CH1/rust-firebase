@@ -68,7 +68,7 @@ impl Firebase {
         }
 
         Ok(Firebase {
-            url: url,
+            url,
         })
     }
 
@@ -128,13 +128,13 @@ impl Firebase {
         }
 
         Ok(Firebase {
-            url: url,
+            url,
         })
     }
 
     /// Creates a FirebaseParams instance, this instance has query parameters
     /// that are associated with it and that are used in every request made.
-    /// Since query parameters only affect incomming data from Firebase, you can only
+    /// Since query parameters only affect incoming data from Firebase, you can only
     /// GET data with a FirebaseParams instance.
     ///
     /// This constructor takes in a FbOps struct to define all of its parameters,
@@ -349,7 +349,7 @@ impl Firebase {
         res_body.read_to_string(&mut body)?;
 
         Ok(Response {
-            body: body,
+            body,
             code: res.status(),
         })
     }
@@ -361,7 +361,7 @@ impl Firebase {
         })
     }
 
-    fn with_params<T: ToString>(&self, key: &'static str, value: T) -> FirebaseParams {
+    fn params<T: ToString>(&self, key: &'static str, value: T) -> FirebaseParams {
         FirebaseParams::new(self.url.clone(), key, value)
     }
 }
@@ -492,7 +492,7 @@ impl FirebaseParams {
             .finish();
     }
 
-    fn get_auth(url: &Url) -> HashMap<&'static str, String> {
+    fn auth(url: &Url) -> HashMap<&'static str, String> {
         url.query_pairs()
             .filter(|&(ref k, _)| k == AUTH)
             .map(|(_, v)| (AUTH, v.into_owned()))
@@ -501,16 +501,16 @@ impl FirebaseParams {
 
     fn new<T: ToString>(url: Url, key: &'static str, value: T) -> Self {
         let me = FirebaseParams {
-            params: FirebaseParams::get_auth(&url),
-            url: url,
+            params: FirebaseParams::auth(&url),
+            url,
         };
         me.add_param(key, value)
     }
 
     fn from_ops(url: Url, opts: &FbOps) -> Self {
         let mut me = FirebaseParams {
-            params: FirebaseParams::get_auth(&url),
-            url: url,
+            params: FirebaseParams::auth(&url),
+            url,
         };
         if let Some(order) = opts.order_by {
             me.params.insert(ORDER_BY, order.to_string());
@@ -666,7 +666,7 @@ impl Response {
 fn unwrap_path(url: &Url) -> Result<str::Split<char>, ParseError> {
     match url.path_segments() {
         None => return Err(ParseError::UrlHasNoPath),
-        Some(p) => return Ok(p),
+        Some(p) => Ok(p),
     }
 }
 

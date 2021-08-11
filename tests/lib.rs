@@ -51,15 +51,15 @@ fn handle_slashes() {
 fn handle_json_suffix() {
     let f = Firebase::new("https://db.rifebass.com").ok().unwrap();
     let f = f.at("0.json").ok().unwrap().at("1.json").ok().unwrap()
-             .at("1.json").ok().unwrap().at("8.json").ok().unwrap()
-             .at("9.json").ok().unwrap().at("9.json").ok().unwrap()
-             .at("9.json").ok().unwrap().at("8.json").ok().unwrap()
-             .at("8.json").ok().unwrap().at("1.json").ok().unwrap()
-             .at("9.json").ok().unwrap().at("9.json").ok().unwrap()
-             .at("9.json").ok().unwrap().at("1.json").ok().unwrap()
-             .at("1.json").ok().unwrap().at("9.json").ok().unwrap()
-             .at("7.json").ok().unwrap().at("2.json").ok().unwrap()
-             .at("5.json").ok().unwrap().at("3.json").ok().unwrap();
+        .at("1.json").ok().unwrap().at("8.json").ok().unwrap()
+        .at("9.json").ok().unwrap().at("9.json").ok().unwrap()
+        .at("9.json").ok().unwrap().at("8.json").ok().unwrap()
+        .at("8.json").ok().unwrap().at("1.json").ok().unwrap()
+        .at("9.json").ok().unwrap().at("9.json").ok().unwrap()
+        .at("9.json").ok().unwrap().at("1.json").ok().unwrap()
+        .at("1.json").ok().unwrap().at("9.json").ok().unwrap()
+        .at("7.json").ok().unwrap().at("2.json").ok().unwrap()
+        .at("5.json").ok().unwrap().at("3.json").ok().unwrap();
     let url_now = "https://db.rifebass.com/0/1/1/8/9/9/9/8/8/1/9/9/9/1/1/9/7/2/5/3.json";
     assert_eq!(url_now, f.get_url());
 }
@@ -107,13 +107,13 @@ fn test_async_get() {
 fn test_ops_ctor() {
     let fb = Firebase::new("https://db.fb.com").ok().unwrap();
     let query = fb.ops(&FbOps {
-        order_by:       Some("Hello World"),
+        order_by: Some("Hello World"),
         limit_to_first: Some(5),
-        end_at:         Some(7),
-        equal_to:       Some(3),
-        shallow:        Some(true),
-        format:         Some(true),
-        .. FbOps::default()
+        end_at: Some(7),
+        equal_to: Some(3),
+        shallow: Some(true),
+        format: Some(true),
+        ..FbOps::default()
     });
 
     let corr = Url::parse("https://db.fb.com/?limitToFirst=5&orderBy=Hello+World&equalTo=3&format=export&shallow=true&endAt=7").ok().unwrap();
@@ -124,7 +124,7 @@ fn test_ops_ctor() {
 #[test]
 fn test_resp_json() {
     let response = Response {
-        code: StatusCode::Ok,
+        code: StatusCode::OK,
         body: "{
             \"id\":   \"mongo id\",
             \"data\": \"Hello World!\"
@@ -147,7 +147,7 @@ fn test_resp_json() {
 #[test]
 fn test_resp_struct_easy() {
     let response = Response {
-        code: StatusCode::Ok,
+        code: StatusCode::OK,
         body: "{
             \"fizz\": 3,
             \"buzz\": 5
@@ -161,8 +161,8 @@ fn test_resp_struct_easy() {
 }
 
 fn assert_queries_eq(a: &Url, b: &Url) {
-    let param_a = a.query_pairs().collect::<HashMap<_,_>>();
-    let param_b = b.query_pairs().collect::<HashMap<_,_>>();
+    let param_a = a.query_pairs().collect::<HashMap<_, _>>();
+    let param_b = b.query_pairs().collect::<HashMap<_, _>>();
 
     assert_eq!(param_a, param_b);
 }

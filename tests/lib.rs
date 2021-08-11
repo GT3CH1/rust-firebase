@@ -1,11 +1,10 @@
 extern crate firebase;
 extern crate url;
-extern crate rustc_serialize;
-extern crate hyper;
+extern crate isahc;
 
 use firebase::*;
 use url::Url;
-use hyper::status::StatusCode;
+use isahc::http::StatusCode;
 use std::collections::HashMap;
 
 use std::sync::{Arc, Mutex};

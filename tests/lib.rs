@@ -5,7 +5,6 @@ extern crate serde;
 
 use firebase::*;
 use url::Url;
-use isahc::http::StatusCode;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 

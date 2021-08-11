@@ -1,12 +1,12 @@
 extern crate firebase;
 extern crate url;
 extern crate isahc;
+extern crate serde;
 
 use firebase::*;
 use url::Url;
 use isahc::http::StatusCode;
 use std::collections::HashMap;
-
 use std::sync::{Arc, Mutex};
 
 #[test]
@@ -94,7 +94,7 @@ fn test_async_get() {
     let finished = Arc::new(Mutex::new(false));
 
     let marker = finished.clone();
-    let thread = db_ref.get_async(move |_| {
+    let thread = db_ref.async_get(move |_| {
         let mut finished = marker.lock().unwrap();
         *finished = true;
     });
@@ -121,54 +121,9 @@ fn test_ops_ctor() {
     assert_queries_eq(&corr, &this);
 }
 
-#[test]
-fn test_resp_json() {
-    let response = Response {
-        code: StatusCode::OK,
-        body: "{
-            \"id\":   \"mongo id\",
-            \"data\": \"Hello World!\"
-        }".to_string(),
-    };
-
-    let record = match response.json().ok().expect("Should've parsed json") {
-        Json::Object(o) => o,
-        _ => panic!("This shouldv'e been a object!"),
-    };
-
-    let data = record.get("data").expect("Should've had a data member");
-
-    match data.clone() {
-        Json::String(d) => assert_eq!("Hello World!", d),
-        _ => panic!("This shouldv'e been a string!"),
-    }
-}
-
-#[test]
-fn test_resp_struct_easy() {
-    let response = Response {
-        code: StatusCode::OK,
-        body: "{
-            \"fizz\": 3,
-            \"buzz\": 5
-        }".to_string(),
-    };
-
-    let bee: FizzBuzz = response.parse().ok().expect("Should parse into FizzBuzz struct");
-
-    assert_eq!(bee.fizz, 3);
-    assert_eq!(bee.buzz, 5);
-}
-
 fn assert_queries_eq(a: &Url, b: &Url) {
     let param_a = a.query_pairs().collect::<HashMap<_, _>>();
     let param_b = b.query_pairs().collect::<HashMap<_, _>>();
 
     assert_eq!(param_a, param_b);
-}
-
-#[derive(RustcDecodable)]
-struct FizzBuzz {
-    fizz: u32,
-    buzz: u32,
 }

@@ -110,7 +110,8 @@ The full list of supported parameters are listed here:
 
 ### Working with JSON values
 
-For now JSON is sent and received as a string literal, an easier method is
+* Json is received as a serde_json Value object.
+* For now JSON is received as a string literal, an easier method is
 likely to be implemented in future versions
 
 ```Rust

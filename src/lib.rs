@@ -4,7 +4,8 @@ Please have a look at the ```Firebase``` struct to get started.
  */
 
 extern crate url;
-extern crate rustc_serialize;
+extern crate serde;
+extern crate serde_json;
 extern crate isahc;
 
 use std::str;
@@ -15,10 +16,8 @@ use std::thread::JoinHandle;
 use url::Url;
 use std::io::{self, Read};
 
-use rustc_serialize::Decodable;
-use rustc_serialize::json;
-pub use rustc_serialize::json::{Json, BuilderError, DecoderError};
 use isahc::http::StatusCode;
+use serde_json::Value;
 
 /// A Firebase instance to manage data.
 #[derive(Clone)]
@@ -174,7 +173,7 @@ impl Firebase {
     /// let info = episode.get();
     /// ```
     pub fn get(&self) -> Result<Response, ReqErr> {
-        self.request(Method::GET, None)
+        self.request(Method::GET, Value::Null)
     }
 
     /// Sets data to Firebase.
@@ -183,10 +182,10 @@ impl Firebase {
     /// # use firebase::Firebase;
     /// let firebase = Firebase::new("https://shows.firebaseio.com").unwrap();
     /// let episode = firebase.at("/futurama/episodes/140/description").unwrap();
-    /// let info = episode.set("The Last Episode!");
+    /// let info = episode.set(serde_json::json!("The Last Episode!"));
     /// ```
-    pub fn set(&self, data: &str) -> Result<Response, ReqErr> {
-        self.request(Method::PUT, Some(data))
+    pub fn set(&self, data: Value) -> Result<Response, ReqErr> {
+        self.request(Method::PUT, data)
     }
 
     /// Pushes data to Firebase.
@@ -195,10 +194,10 @@ impl Firebase {
     /// # use firebase::Firebase;
     /// let firebase = Firebase::new("https://shows.firebaseio.com").unwrap();
     /// let episodes = firebase.at("/futurama/episodes").unwrap();
-    /// let info = episodes.push("The Lost Episode");
+    /// let info = episodes.push(serde_json::json!("The Lost Episode"));
     /// ```
-    pub fn push(&self, data: &str) -> Result<Response, ReqErr> {
-        self.request(Method::POST, Some(data))
+    pub fn push(&self, data: Value) -> Result<Response, ReqErr> {
+        self.request(Method::POST, data)
     }
 
     /// Updates Firebase data.
@@ -207,10 +206,10 @@ impl Firebase {
     /// # use firebase::Firebase;
     /// let firebase = Firebase::new("https://shows.firebaseio.com").unwrap();
     /// let desc = firebase.at("/futurama/episodes/140/description").unwrap();
-    /// let info = desc.update("The Penultimate Episode!");
+    /// let info = desc.update(serde_json::json!("The Penultimate Episode!"));
     /// ```
-    pub fn update(&self, data: &str) -> Result<Response, ReqErr> {
-        self.request(Method::PUT, Some(data))
+    pub fn update(&self, data: Value) -> Result<Response, ReqErr> {
+        self.request(Method::PUT, data)
     }
 
     /// Removes Firebase data.
@@ -222,7 +221,7 @@ impl Firebase {
     /// episode.remove();
     /// ```
     pub fn remove(&self) -> Result<Response, ReqErr> {
-        self.request(Method::DELETE, None)
+        self.request(Method::DELETE, serde_json::Value::Null)
     }
 
     /// Asynchronous version of the get method, takes a callback
@@ -233,112 +232,111 @@ impl Firebase {
     /// let firebase = Firebase::new("https://shows.firebaseio.com").unwrap();
     /// let desc = firebase.at("/futurama/episodes/141/description").unwrap();
     /// let original = "The Lost Episode";
-    /// desc.get_async(move |result| {
+    /// desc.async_get(move |result| {
     ///     if result.unwrap().body != original {
     ///         println!("The description changed!");
     ///     }
     /// });
     pub fn async_get<F>(&self, callback: F) -> JoinHandle<()>
         where F: Fn(Result<Response, ReqErr>) + Send + 'static {
-        Firebase::request_url_async(self.url.clone(), Method::GET, None, callback)
+        Firebase::request_url_async(self.url.clone(), Method::GET, serde_json::Value::Null, callback)
     }
 
     /// Asynchronous version of the set method, takes a callback
     /// and returns a handle to the thread making the request to Firebase.
     pub fn async_set<S, F>(&self, data: S, callback: F) -> JoinHandle<()>
-        where F: Fn(Result<Response, ReqErr>) + Send + 'static, S: Into<String> {
-        Firebase::request_url_async(self.url.clone(), Method::PUT, Some(data.into()), callback)
+        where F: Fn(Result<Response, ReqErr>) + Send + 'static, S: Into<String> + serde::Serialize {
+        Firebase::request_url_async(self.url.clone(), Method::PUT, serde_json::to_value(data).unwrap(), callback)
     }
 
     /// Asynchronous version of the push method, takes a callback
     /// and returns a handle to the thread making the request to Firebase.
     pub fn push_async<S, F>(&self, data: S, callback: F) -> JoinHandle<()>
-        where F: Fn(Result<Response, ReqErr>) + Send + 'static, S: Into<String> {
-        Firebase::request_url_async(self.url.clone(), Method::POST, Some(data.into()), callback)
+        where F: Fn(Result<Response, ReqErr>) + Send + 'static, S: Into<String> + serde::Serialize {
+        Firebase::request_url_async(self.url.clone(), Method::POST, serde_json::to_value(data).unwrap(), callback)
     }
 
     /// Asynchronous version of the update method, takes a callback
     /// and returns a handle to the thread making the request to Firebase.
     pub fn update_async<S, F>(&self, data: S, callback: F) -> JoinHandle<()>
-        where F: Fn(Result<Response, ReqErr>) + Send + 'static, S: Into<String> {
-        Firebase::request_url_async(self.url.clone(), Method::PUT, Some(data.into()), callback)
+        where F: Fn(Result<Response, ReqErr>) + Send + 'static, S: Into<String> + serde::Serialize {
+        Firebase::request_url_async(self.url.clone(), Method::PUT, serde_json::to_value(data).unwrap(), callback)
     }
 
     /// Asynchronous version of the remove method, takes a callback
     /// and returns a handle to the thread making the request to Firebase.
     pub fn remove_async<F>(&self, callback: F) -> JoinHandle<()>
         where F: Fn(Result<Response, ReqErr>) + Send + 'static {
-        Firebase::request_url_async(self.url.clone(), Method::DELETE, None, callback)
+        Firebase::request_url_async(self.url.clone(), Method::DELETE, serde_json::Value::Null, callback)
     }
 
     /// Creates a ```FirebaseParams``` instance, a Firebase struct that only
     /// knows how to GET data, and sorts this data by the key provided.
     pub fn order_by(&self, key: &str) -> FirebaseParams {
-        self.with_params(ORDER_BY, key)
+        self.params(ORDER_BY, key)
     }
 
     /// Creates a ```FirebaseParams``` instance, a Firebase struct that only
     /// knows how to GET data, and limits the number of entries returned
     /// on each request to the first ```count```. Often used with ```order_by```.
     pub fn limit_to_first(&self, count: u32) -> FirebaseParams {
-        self.with_params(LIMIT_TO_FIRST, count)
+        self.params(LIMIT_TO_FIRST, count)
     }
 
     /// Creates a ```FirebaseParams``` instance, a Firebase struct that only
     /// knows how to GET data, and limits the number of entries returned
     /// on each request to the last ```count```. Often used with ```order_by```.
     pub fn limit_to_last(&self, count: u32) -> FirebaseParams {
-        self.with_params(LIMIT_TO_LAST, count)
+        self.params(LIMIT_TO_LAST, count)
     }
 
     /// Creates a ```FirebaseParams``` instance, a Firebase struct that only
     /// knows how to GET data, and only returns entries starting after
     /// the specified index. Often used with ```order_by```.
     pub fn start_at(&self, index: u32) -> FirebaseParams {
-        self.with_params(START_AT, index)
+        self.params(START_AT, index)
     }
 
     /// Creates a ```FirebaseParams``` instance, a Firebase struct that only
     /// knows how to GET data, and only returns entries appearing before
     /// the specified index. Often used with ```order_by```.
     pub fn end_at(&self, index: u32) -> FirebaseParams {
-        self.with_params(END_AT, index)
+        self.params(END_AT, index)
     }
 
     /// Creates a ```FirebaseParams``` instance, a Firebase struct that only
     /// knows how to GET data, and returns only the entry at the specified
     /// index. Often used with ```order_by```.
     pub fn equal_to(&self, index: u32) -> FirebaseParams {
-        self.with_params(EQUAL_TO, index)
+        self.params(EQUAL_TO, index)
     }
 
     /// Creates a ```FirebaseParams``` instance, a Firebase struct that only
     /// knows how to GET data, and only returns a shallow copy of the db
     /// in every request.
     pub fn shallow(&self, flag: bool) -> FirebaseParams {
-        self.with_params(SHALLOW, flag)
+        self.params(SHALLOW, flag)
     }
 
     /// Creates a ```FirebaseParams``` instance, a Firebase struct that only
     /// knows how to GET data, and formats the data to be exported in every
     /// request. (e.g. includes a priority field).
     pub fn format(&self) -> FirebaseParams {
-        self.with_params(FORMAT, EXPORT)
+        self.params(FORMAT, EXPORT)
     }
 
     #[inline]
-    fn request(&self, method: Method, data: Option<&str>) -> Result<Response, ReqErr> {
+    fn request(&self, method: Method, data: Value) -> Result<Response, ReqErr> {
         Firebase::request_url(self.url.clone(), method, data)
     }
 
-    fn request_url(url: Url, method: Method, data: Option<&str>) -> Result<Response, ReqErr> {
+    fn request_url(url: Url, method: Method, data: Value) -> Result<Response, ReqErr> {
         let client = isahc::HttpClient::new().unwrap();
         let _url = url.as_str();
         let req = match method {
             Method::GET => client.get(_url),
-            Method::POST => client.post(_url, data.expect("data")),
-            Method::PUT => client.put(_url, data.expect("data")),
-            // Method::PATCH => client.pa(_url).body(data.expect("data")),
+            Method::POST => client.post(_url, data.to_string()),
+            Method::PUT => client.put(_url, data.to_string()),
             Method::DELETE => client.delete(_url),
         };
 
@@ -347,17 +345,18 @@ impl Firebase {
         let mut body = String::new();
         let res_body = res.body_mut();
         res_body.read_to_string(&mut body)?;
+        let value: Value = serde_json::to_value(body).unwrap();
 
         Ok(Response {
-            body,
+            body: value,
             code: res.status(),
         })
     }
 
-    fn request_url_async<F>(url: Url, method: Method, data: Option<String>, callback: F) -> JoinHandle<()>
+    fn request_url_async<F>(url: Url, method: Method, data: Value, callback: F) -> JoinHandle<()>
         where F: Fn(Result<Response, ReqErr>) + Send + 'static {
         thread::spawn(move || {
-            callback(Firebase::request_url(url, method, data.as_ref().map(|s| s as &str)));
+            callback(Firebase::request_url(url, method, data));
         })
     }
 
@@ -407,14 +406,14 @@ impl FirebaseParams {
     /// let first5 = alphabetic.get();
     /// ```
     pub fn get(&self) -> Result<Response, ReqErr> {
-        Firebase::request_url(self.url.clone(), Method::GET, None)
+        Firebase::request_url(self.url.clone(), Method::GET, serde_json::Value::Null)
     }
 
     /// Asynchronous version of the get method, takes a callback
     /// and returns a handle to the thread making the request to Firebase.
     pub fn get_async<F>(&self, callback: F) -> JoinHandle<()>
         where F: Fn(Result<Response, ReqErr>) + Send + 'static {
-        Firebase::request_url_async(self.url.clone(), Method::GET, None, callback)
+        Firebase::request_url_async(self.url.clone(), Method::GET, serde_json::Value::Null, callback)
     }
 
     /// Returns the current URL as a string that will be used
@@ -625,7 +624,7 @@ impl From<url::ParseError> for ParseError {
 
 #[derive(Debug)]
 pub struct Response {
-    pub body: String,
+    pub body: Value,
     pub code: StatusCode,
 }
 
@@ -635,31 +634,27 @@ impl Response {
         self.code == StatusCode::OK
     }
 
-    /// Turns the response body into a Json enum.
-    pub fn json(&self) -> Result<Json, BuilderError> {
-        Json::from_str(&self.body)
-    }
-
     /// Encodes the data received into a struct matching the data.
     /// # Examples
     ///
     /// ```
     /// extern crate firebase;
-    /// use hyper::status::StatusCode;
+    /// extern crate isahc;
+    /// use isahc::http::StatusCode;
     /// use firebase::Response;
     ///
     /// fn main() {
     ///     let response = Response {
-    ///         body: "324567898".to_string(),
-    ///         code: StatusCode::Ok,
+    ///         body: serde_json::from_str("324567898").unwrap(),
+    ///         code: StatusCode::OK,
     ///     };
     ///
-    ///     let parsed: u32 = response.parse().unwrap();
+    ///     let parsed: u32 = serde_json::from_value(response.body).unwrap();
     ///     println!("Data is: {}", parsed);
     /// }
     /// ```
-    pub fn parse<D>(&self) -> Result<D, DecoderError> where D: Decodable {
-        json::decode(&self.body)
+    pub fn parse<D>(&self) -> Result<Value, serde_json::Error> {
+        serde_json::to_value(&self.body)
     }
 }
 

@@ -238,14 +238,14 @@ impl Firebase {
     ///         println!("The description changed!");
     ///     }
     /// });
-    pub fn get_async<F>(&self, callback: F) -> JoinHandle<()>
+    pub fn async_get<F>(&self, callback: F) -> JoinHandle<()>
         where F: Fn(Result<Response, ReqErr>) + Send + 'static {
         Firebase::request_url_async(self.url.clone(), Method::GET, None, callback)
     }
 
     /// Asynchronous version of the set method, takes a callback
     /// and returns a handle to the thread making the request to Firebase.
-    pub fn set_async<S, F>(&self, data: S, callback: F) -> JoinHandle<()>
+    pub fn async_set<S, F>(&self, data: S, callback: F) -> JoinHandle<()>
         where F: Fn(Result<Response, ReqErr>) + Send + 'static, S: Into<String> {
         Firebase::request_url_async(self.url.clone(), Method::PUT, Some(data.into()), callback)
     }

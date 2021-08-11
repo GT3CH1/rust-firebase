@@ -65,21 +65,21 @@ let response = show.get();
 
 ```Rust
 let description = episode.at("description");
-let response = description.set("the last episode");
+let response = description.set(serde_json::json!("the last episode"));
 ```
 
 ### Pushing data
 
 ```Rust
 let episodes = firebase.at("/shows/futurama/episodes");
-let response = episodes.push("The Lost Episode!");
+let response = episodes.push(serde_json::json!("The Lost Episode!"));
 ```
 
 ### Updating data
 
 ```Rust
 let description = episode.at("description");
-let response = description.update("the penultimate episode");
+let response = description.update(serde_json::json!("the penultimate episode"));
 ```
 
 ### Removing data
@@ -105,18 +105,30 @@ The full list of supported parameters are listed here:
  - ```end_at```
  - ```equal_to```
  - ```shallow```
-
-## Not yet there...
-
 ### Working with JSON values
 
-* Json is received as a serde_json Value object.
-* For now JSON is received as a string literal, an easier method is
-likely to be implemented in future versions
+* Json is received and sent as a serde_json Value object.
 
+Example
 ```Rust
-let json = "{ \"name\": \"David Smith\" }"
+let json = serde_json::json!({ "name": "David Smith" });
 
 let people = firebase.at("/earth/us/indiana");
+let response = episodes.push(json);
+
+...
+
+
+#[derive(Serialize,Deserialize)]
+struct Person {
+    name: String
+}
+...
+let person = Person {
+    name: "Gavin"
+};
+
+let json = serde_json::to_value(person);
+let people = firebase.at("/earth/us/utah");
 let response = episodes.push(json);
 ```

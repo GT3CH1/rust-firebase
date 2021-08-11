@@ -62,7 +62,7 @@ impl Firebase {
 
         {
             // Append initial .json
-            let mut last = url.path_segments().expect("last segment").last().unwrap().to_string();
+            let last = url.path_segments().expect("last segment").last().unwrap().to_string();
             let mut path = url.path_segments_mut().expect("path segments");
             path.pop().push(&(last + ".json"));
         }

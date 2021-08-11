@@ -113,7 +113,7 @@ impl Firebase {
             // Remove .json from the old path's end.
             let last = url.path_segments().expect("last segment").last().unwrap().to_string();
             let mut path = url.path_segments_mut().expect("path segments");
-            path.pop().push(last.trim_right_matches(".json"));
+            path.pop().push(last.trim_end_matches(".json"));
 
             let add_path = add_path.trim_matches('/');
             let add_path = if !add_path.ends_with(".json") {

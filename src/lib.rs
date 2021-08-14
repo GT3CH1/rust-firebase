@@ -345,7 +345,7 @@ impl Firebase {
         let mut body = String::new();
         let res_body = res.body_mut();
         res_body.read_to_string(&mut body)?;
-        let value: Value = serde_json::to_value(body).unwrap();
+        let value: Value = serde_json::from_str(&body).unwrap();
 
         Ok(Response {
             body: value,

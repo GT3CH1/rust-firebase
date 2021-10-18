@@ -114,7 +114,7 @@ Example
 let json = serde_json::json!({ "name": "David Smith" });
 
 let people = firebase.at("/earth/us/indiana");
-let response = episodes.push(json);
+let response = people.push(json);
 
 ...
 
@@ -130,5 +130,5 @@ let person = Person {
 
 let json = serde_json::to_value(person);
 let people = firebase.at("/earth/us/utah");
-let response = episodes.push(json);
+let response = people.push(json);
 ```

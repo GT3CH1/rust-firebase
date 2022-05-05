@@ -11,8 +11,7 @@ exclude = ["examples/*", "tests/*"]
 keywords = ["firebase", "rest", "api"]
 
 [dependencies]
-isahc = "1.4.0"
+isahc = "1.7.1"
 url = "2.2.2"
-rustc-serialize = "0.3.24"
-serde_json = "1.0.59"
-serde = "1.0.127"
+serde_json = "1.0.81"
+serde = "1.0.137"

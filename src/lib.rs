@@ -41,7 +41,7 @@ impl Firebase {
     /// - If a url cannot be parsed into a valid url then a ```Err(ParseError::Parser(url::ParseError)```
     ///   will be returned.
     pub fn new(url: &str) -> Result<Self, ParseError> {
-        let url = Url::parse(&url)?;
+        let url = Url::parse(url)?;
 
         Firebase::from_url(url)
     }
@@ -86,7 +86,7 @@ impl Firebase {
     /// - If a url cannot be parsed into a valid url then a ```Err(ParseError::Parser(url::ParseError)```
     ///   will be returned.
     pub fn authed(url: &str, auth_token: &str) -> Result<Self, ParseError> {
-        let mut url = Url::parse(&url)?;
+        let mut url = Url::parse(url)?;
         url.query_pairs_mut().append_pair(AUTH, auth_token).finish();
 
         Firebase::from_url(url)
@@ -121,7 +121,7 @@ impl Firebase {
                 Cow::Borrowed(add_path)
             };
 
-            for component in add_path.split("/") {
+            for component in add_path.split('/') {
                 path.push(component);
             }
         }
@@ -550,16 +550,16 @@ enum Method {
     DELETE,
 }
 
-const ORDER_BY: &'static str = "orderBy";
-const LIMIT_TO_FIRST: &'static str = "limitToFirst";
-const LIMIT_TO_LAST: &'static str = "limitToLast";
-const START_AT: &'static str = "startAt";
-const END_AT: &'static str = "endAt";
-const EQUAL_TO: &'static str = "equalTo";
-const SHALLOW: &'static str = "shallow";
-const FORMAT: &'static str = "format";
-const EXPORT: &'static str = "export";
-const AUTH: &'static str = "auth";
+const ORDER_BY: &str = "orderBy";
+const LIMIT_TO_FIRST: &str = "limitToFirst";
+const LIMIT_TO_LAST: &str = "limitToLast";
+const START_AT: &str = "startAt";
+const END_AT: &str = "endAt";
+const EQUAL_TO: &str = "equalTo";
+const SHALLOW: &str = "shallow";
+const FORMAT: &str = "format";
+const EXPORT: &str = "export";
+const AUTH: &str = "auth";
 
 #[derive(Debug)]
 pub struct FbOps<'l> {
